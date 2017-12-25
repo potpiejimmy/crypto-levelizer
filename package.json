@@ -1,0 +1,27 @@
+{
+  "name": "crypto-levelizer",
+  "version": "1.0.0",
+  "description": "The ultimate money machine",
+  "main": "index.js",
+  "scripts": {
+    "start": "tsc && node dist/app.js",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://potpiejimmy@github.com/potpiejimmy/crypto-levelizer.git"
+  },
+  "author": "Thorsten Liese",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/potpiejimmy/crypto-levelizer/issues"
+  },
+  "homepage": "https://github.com/potpiejimmy/crypto-levelizer#readme",
+  "dependencies": {
+    "node-fetch": "^1.7.3",
+    "typescript": "^2.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^8.5.2"
+  }
+}
