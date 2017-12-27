@@ -75,7 +75,7 @@ function retrade(coin) : Promise<any> {
     process.stdout.write(side + " " + absDiff + " " + REF_CUR + " of " + coin.asset + " = " + quantity + "...");
 
     let params = "symbol=" + coin.asset + REF_CUR + "&side=" + side + "&type=MARKET&quantity=" + quantity + "&timestamp=" + Date.now();
-    url = "https://api.binance.com/api/v3/order/test?" + params + "&signature=" + sign(params);
+    url = "https://api.binance.com/api/v3/order?" + params + "&signature=" + sign(params);
     return fetch(url, {method:'POST', headers: {"X-MBX-APIKEY": process.env.API_KEY}})
            .then(res => res.json())
            .then(res => {
