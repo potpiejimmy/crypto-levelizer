@@ -3,7 +3,7 @@ import * as fetch from 'node-fetch';
 import * as utils from './utils';
 
 const REF_CUR = 'BNB'; // reference currency for trading
-const IGNORE_LIST = ['BTC']; // currencies to ignore
+const IGNORE_LIST = ['BTC','BTM','HCC','LLT']; // currencies to ignore
 
 console.log("=== The ultimate money machine is running ===\n");
 
@@ -25,6 +25,7 @@ fetch(url)
 .then(allPrices => {
     // add all prices to our map
     allPrices.forEach(i => prices[i.symbol] = parseFloat(i.price));
+    prices[REF_CUR+REF_CUR] = 1.0;
 
     // now, read all account assets
     let params = "timestamp=" + Date.now();
@@ -43,14 +44,14 @@ fetch(url)
             coins.push(i);
         }
     });
-    console.log("Found " + coins.length + " assets with total value " + totalVal + " " + REF_CUR + ".");
+    console.log("Found " + coins.length + " assets with total value " + totalVal + " " + REF_CUR + ".\n");
     totalAverage = totalVal / coins.length;
-    console.log("Now re-trading all coins to match the average of " + totalAverage + " " + REF_CUR + ".");
+    console.log("Now trading all coins to match the average of " + totalAverage + " " + REF_CUR + ".");
     // store diff member (difference to average)
     coins.forEach(i => i.diff = i.refVal - totalAverage);
-    // sort by diff, descending, so that we are selling to REF_CUR first before buying with REF_CUR
+    // sort by diff, descending, so that we are selling before buying with REF_CUR
     coins = coins.sort((a,b) => b.diff - a.diff);
-    // now loop
+    // now loop, wait 500ms between trades
     return utils.asyncLoop(coins, (i,next) => {
         retrade(i)
             .then(() => setTimeout(() => next(), 500))
@@ -71,13 +72,16 @@ function retrade(coin) : Promise<any> {
     let quantity: number = absDiff/prices[coin.asset + REF_CUR];
     let quantityString = quantity.toPrecision(2);
     let side = (diff > 0 ? 'SELL' : 'BUY');
-    console.log(side + " " + absDiff + " " + REF_CUR + " of " + coin.asset + " = " + quantityString); 
+    process.stdout.write(side + " " + absDiff + " " + REF_CUR + " of " + coin.asset + " = " + quantityString + "...");
 
     let params = "symbol=" + coin.asset + REF_CUR + "&side=" + side + "&type=MARKET&quantity=" + quantityString + "&timestamp=" + Date.now();
-    url = "https://api.binance.com/api/v3/order?" + params + "&signature=" + sign(params);
+    url = "https://api.binance.com/api/v3/order/test?" + params + "&signature=" + sign(params);
     return fetch(url, {method:'POST', headers: {"X-MBX-APIKEY": process.env.API_KEY}})
            .then(res => res.json())
-           .then(res => console.log(res));
+           .then(res => {
+               if (res.code && res.code!=0) console.log(res.msg);
+               else console.log("OK");
+            });
 }
 
 function sign(params : string) : string {
