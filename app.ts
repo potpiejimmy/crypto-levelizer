@@ -5,7 +5,7 @@ import * as utils from './utils';
 const REF_CUR = 'BNB'; // reference currency for trading
 const IGNORE_LIST = ['BTC','BTM','HCC','LLT']; // currencies to ignore
 
-console.log("=== The ultimate money machine is running ===\n");
+console.log("=== The ultimate money machine is running: " + new Date() + " ===\n");
 
 if (!process.env.API_KEY || !process.env.API_SECRET) {
     console.log("Please set API_KEY and API_SECRET environment variables.");
@@ -36,9 +36,9 @@ fetch(url)
 .then(res => res.json())
 .then(res => {
     res.balances.forEach(i => {
-        let val = parseFloat(i.free);
         if (IGNORE_LIST.indexOf(i.asset) == -1 && prices[i.asset + REF_CUR]) {
-            i.refVal = i.asset === REF_CUR ? val : val * prices[i.asset + REF_CUR];
+            let val = parseFloat(i.free);
+            i.refVal = val * prices[i.asset + REF_CUR];
             console.log(val + " " + i.asset + " * " + prices[i.asset + REF_CUR] + " " + i.asset + REF_CUR + " = " + i.refVal + " " + REF_CUR);
             totalVal += i.refVal;
             coins.push(i);
