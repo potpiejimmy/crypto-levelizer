@@ -37,7 +37,7 @@ fetch(url)
 .then(res => {
     res.balances.forEach(i => {
         let val = parseFloat(i.free);
-        if (val > 0 && IGNORE_LIST.indexOf(i.asset) == -1) {
+        if (IGNORE_LIST.indexOf(i.asset) == -1 && prices[i.asset + REF_CUR]) {
             i.refVal = i.asset === REF_CUR ? val : val * prices[i.asset + REF_CUR];
             console.log(val + " " + i.asset + " * " + prices[i.asset + REF_CUR] + " " + i.asset + REF_CUR + " = " + i.refVal + " " + REF_CUR);
             totalVal += i.refVal;
@@ -70,11 +70,11 @@ function retrade(coin) : Promise<any> {
     let diff = coin.refVal - totalAverage;
     let absDiff = Math.abs(diff);
     let quantity: number = absDiff/prices[coin.asset + REF_CUR];
-    let quantityString = quantity.toPrecision(2);
+    quantity = parseFloat(quantity.toPrecision(2));
     let side = (diff > 0 ? 'SELL' : 'BUY');
-    process.stdout.write(side + " " + absDiff + " " + REF_CUR + " of " + coin.asset + " = " + quantityString + "...");
+    process.stdout.write(side + " " + absDiff + " " + REF_CUR + " of " + coin.asset + " = " + quantity + "...");
 
-    let params = "symbol=" + coin.asset + REF_CUR + "&side=" + side + "&type=MARKET&quantity=" + quantityString + "&timestamp=" + Date.now();
+    let params = "symbol=" + coin.asset + REF_CUR + "&side=" + side + "&type=MARKET&quantity=" + quantity + "&timestamp=" + Date.now();
     url = "https://api.binance.com/api/v3/order/test?" + params + "&signature=" + sign(params);
     return fetch(url, {method:'POST', headers: {"X-MBX-APIKEY": process.env.API_KEY}})
            .then(res => res.json())
