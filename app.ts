@@ -3,7 +3,7 @@ import * as fetch from 'node-fetch';
 import * as utils from './utils';
 
 const REF_CUR = 'BNB'; // reference currency for trading
-const IGNORE_LIST = ['BTC','BTM','HCC','LLT']; // currencies to ignore
+const IGNORE_LIST = []; // currencies to ignore
 
 console.log("=== The ultimate money machine is running: " + new Date() + " ===\n");
 
@@ -45,6 +45,7 @@ fetch(url)
         }
     });
     console.log("Found " + coins.length + " assets with total value " + totalVal + " " + REF_CUR + ".\n");
+    dumpInfoToStdErr();
     totalAverage = totalVal / coins.length;
     console.log("Now trading all coins to match the average of " + totalAverage + " " + REF_CUR + ".");
     // store diff member (difference to average)
@@ -86,4 +87,12 @@ function retrade(coin) : Promise<any> {
 
 function sign(params : string) : string {
     return crypto.createHmac('sha256', process.env.API_SECRET).update(params).digest('hex');
+}
+
+function dumpInfoToStdErr() {
+    let dinfo = {
+        date: "" + new Date(),
+        value: "$" + (totalVal * prices[REF_CUR + 'USDT']).toFixed(2)
+    }
+    process.stderr.write(JSON.stringify(dinfo) + "\n");
 }
