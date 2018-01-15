@@ -75,14 +75,17 @@ function retrade(coin) : Promise<any> {
     let side = (diff > 0 ? 'SELL' : 'BUY');
     process.stdout.write(side + " " + absDiff + " " + REF_CUR + " of " + coin.asset + " = " + quantity + "...");
 
-    let params = "symbol=" + coin.asset + REF_CUR + "&side=" + side + "&type=MARKET&quantity=" + quantity + "&timestamp=" + Date.now();
+    let params = "symbol=" + coin.asset + REF_CUR + "&side=" + side + "&type=MARKET&quantity=" + quantity + "&newOrderRespType=FULL&timestamp=" + Date.now();
     url = "https://api.binance.com/api/v3/order?" + params + "&signature=" + sign(params);
     return fetch(url, {method:'POST', headers: {"X-MBX-APIKEY": process.env.API_KEY}})
            .then(res => res.json())
            .then(res => {
                if (res.code && res.code!=0) console.log(res.msg);
-               //else console.log("OK");
-               else process.stderr.write(JSON.stringify(res) + "\n");
+               else {
+                   console.log("OK");
+                   // temporarily dump full trade result:
+                   process.stderr.write(JSON.stringify(res) + "\n");
+               }
             });
 }
 
