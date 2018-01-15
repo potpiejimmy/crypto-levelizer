@@ -81,7 +81,8 @@ function retrade(coin) : Promise<any> {
            .then(res => res.json())
            .then(res => {
                if (res.code && res.code!=0) console.log(res.msg);
-               else console.log("OK");
+               //else console.log("OK");
+               else process.stderr.write(JSON.stringify(res) + "\n");
             });
 }
 
