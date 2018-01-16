@@ -14,8 +14,12 @@ if (!process.env.API_KEY || !process.env.API_SECRET) {
 
 let prices = {};  // maps symbols to current prices (float)
 let coins = [];   // current coins to handle
-let totalVal = 0; // total REF_CUR value
-let totalAverage = 0; // average REF_CUR value
+let totalValBefore = 0; // total REF_CUR value before trading
+let totalAverage = 0; // average REF_CUR value (before trading)
+let totalValAfter = 0; // total REF_CUR value after trading
+let totalTradeVolume = 0; // total theoretical trade volume (sum of all diff absolutes)
+let totalTradeVolumeActual = 0; // total actual trade volume after trading
+let totalCommission = 0; // total commission
 
 // first, get all current prices from the public API
 let url = "https://api.binance.com/api/v1/ticker/allPrices";
@@ -28,10 +32,7 @@ fetch(url)
     prices[REF_CUR+REF_CUR] = 1.0;
 
     // now, read all account assets
-    let params = "timestamp=" + Date.now();
-    url = "https://api.binance.com/api/v3/account?" + params + "&signature=" + sign(params);
-    console.log("Reading account assets: GET " + url);
-    return fetch(url, {headers: {"X-MBX-APIKEY": process.env.API_KEY}});
+    return readAssets();
 })
 .then(res => res.json())
 .then(res => {
@@ -40,13 +41,12 @@ fetch(url)
             let val = parseFloat(i.free);
             i.refVal = val * prices[i.asset + REF_CUR];
             console.log(val + " " + i.asset + " * " + prices[i.asset + REF_CUR] + " " + i.asset + REF_CUR + " = " + i.refVal + " " + REF_CUR);
-            totalVal += i.refVal;
+            totalValBefore += i.refVal;
             coins.push(i);
         }
     });
-    console.log("Found " + coins.length + " assets with total value " + totalVal + " " + REF_CUR + ".\n");
-    dumpInfoToStdErr();
-    totalAverage = totalVal / coins.length;
+    console.log("Found " + coins.length + " assets with total value " + totalValBefore + " " + REF_CUR + ".\n");
+    totalAverage = totalValBefore / coins.length;
     console.log("Now trading all coins to match the average of " + totalAverage + " " + REF_CUR + ".");
     // store diff member (difference to average)
     coins.forEach(i => i.diff = i.refVal - totalAverage);
@@ -60,16 +60,33 @@ fetch(url)
     });
 })
 .then(()=> {
+    // now, read all account assets again (after trading)
+    return readAssets();
+})
+.then(res => res.json())
+.then(res => {
+    res.balances.forEach(i => {
+        if (IGNORE_LIST.indexOf(i.asset) == -1 && prices[i.asset + REF_CUR]) totalValAfter += parseFloat(i.free) * prices[i.asset + REF_CUR];
+    });
+    dumpInfoToStdErr();
     console.log("Done.");
 })
 .catch(err => {
     console.log(err);
 });
 
+function readAssets(): Promise<any> {
+    let params = "timestamp=" + Date.now();
+    url = "https://api.binance.com/api/v3/account?" + params + "&signature=" + sign(params);
+    console.log("Reading account assets: GET " + url);
+    return fetch(url, {headers: {"X-MBX-APIKEY": process.env.API_KEY}});
+}
+
 function retrade(coin) : Promise<any> {
     if (coin.asset === REF_CUR) return Promise.resolve();
     let diff = coin.refVal - totalAverage;
     let absDiff = Math.abs(diff);
+    totalTradeVolume += absDiff;
     let quantity: number = absDiff/prices[coin.asset + REF_CUR];
     quantity = parseFloat(quantity.toPrecision(2));
     let side = (diff > 0 ? 'SELL' : 'BUY');
@@ -83,8 +100,12 @@ function retrade(coin) : Promise<any> {
                if (res.code && res.code!=0) console.log(res.msg);
                else {
                    console.log("OK");
-                   // temporarily dump full trade result:
-                   process.stderr.write(JSON.stringify(res) + "\n");
+                   if (res.fills) {
+                        res.fills.forEach(i => {
+                            totalTradeVolumeActual += parseFloat(i.qty) * parseFloat(i.price);
+                            totalCommission += parseFloat(i.commission);
+                        });
+                   }
                }
             });
 }
@@ -93,10 +114,18 @@ function sign(params : string) : string {
     return crypto.createHmac('sha256', process.env.API_SECRET).update(params).digest('hex');
 }
 
+function refCurToUsd(val) : string {
+    return "$" + (val * prices[REF_CUR + 'USDT']).toFixed(2)
+}
+
 function dumpInfoToStdErr() {
     let dinfo = {
         date: "" + new Date(),
-        value: "$" + (totalVal * prices[REF_CUR + 'USDT']).toFixed(2)
+        valueBefore: refCurToUsd(totalValBefore),
+        tradeVolume: refCurToUsd(totalTradeVolume),
+        tradeVolumeActual: refCurToUsd(totalTradeVolumeActual),
+        commission: refCurToUsd(totalCommission),
+        valueAfter: refCurToUsd(totalValAfter)
     }
     process.stderr.write(JSON.stringify(dinfo) + "\n");
 }
