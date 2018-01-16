@@ -18,7 +18,11 @@ process.stdin.on('keypress', (str, key) => {
         process.exit();
     } else {
         i = 0;
-        while (i < COIN_NUM) coinVals[i++] = Math.random() + 1;
+        while (i < COIN_NUM) {
+            var factor = Math.random() + 1;
+            coinVals[i] = Math.random() < 0.5 ? coinVals[i] * factor : coinVals[i] / factor;
+            i++;
+        }
         var newBalance = getBalance();
         console.log("Your new balance after " + (++day) + " days: $" + newBalance);
         console.log("Now rebalancing all coins. Press key to continue...");
