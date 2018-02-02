@@ -53,10 +53,8 @@ fetch(url)
     // sort by diff, descending, so that we are selling before buying with REF_CUR
     coins = coins.sort((a,b) => b.diff - a.diff);
     // now loop, wait 500ms between trades
-    return utils.asyncLoop(coins, (i,next) => {
-        retrade(i)
-            .then(() => setTimeout(() => next(), 500))
-            .catch(err => console.log(err));
+    return utils.asyncLoop(coins, i => {
+        return retrade(i).then(() => new Promise<void>((resolve) => setTimeout(resolve, 500)))
     });
 })
 .then(()=> {
